@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Responsive Picture Background Remover — Upload, remove background (chroma-key demo or API), and download transparent PNG. SEO optimized and AdSense-ready." />
+  <meta name="robots" content="index,follow" />
+  <title>Picture Background Remover — Fast & Responsive</title>
+
+  <!-- Open Graph (good for SEO & social) -->
+  <meta property="og:title" content="Picture Background Remover" />
+  <meta property="og:description" content="Upload an image, remove its background, and download a transparent PNG. Mobile friendly and AdSense-ready." />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --primary:#1565c0; --accent:#0d47a1; --bg1:linear-gradient(135deg,#e8f0fe,#fff7f9);
+    }
+    *{box-sizing:border-box}
+    body{font-family:'Poppins',system-ui,Segoe UI,Roboto,Arial; margin:0; background:var(--bg1); color:#123;}
+    header{background:var(--accent); color:#fff; padding:20px; text-align:center; box-shadow:0 6px 18px rgba(10,30,60,0.12)}
+    .wrap{max-width:1000px; margin:28px auto; padding:20px}
+    .card{background:rgba(255,255,255,0.9); border-radius:12px; padding:18px; box-shadow:0 8px 24px rgba(12,40,80,0.08)}
+
+    .uploader{display:grid; grid-template-columns: 1fr 420px; gap:18px; align-items:start}
+    .drop{border:2px dashed #cfd8e3; border-radius:10px; min-height:220px; display:flex; align-items:center; justify-content:center; padding:18px; text-align:center; transition:0.15s}
+    .drop.dragover{background:#f1f8ff; border-color:var(--primary)}
+    .controls{padding:6px}
+    .controls label{display:block; font-weight:600; margin-bottom:6px}
+    input[type=file]{display:none}
+
+    .btn{display:inline-block; background:var(--primary); color:#fff; padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600}
+    .btn.secondary{background:#fff; color:var(--accent); border:1px solid #d0d9ea}
+
+    .preview{background:#f8fafc; padding:12px; border-radius:10px; text-align:center}
+    canvas{max-width:100%; border-radius:8px; box-shadow:0 8px 30px rgba(10,30,60,0.08)}
+
+    .form-row{display:flex; gap:12px; align-items:center; margin-top:10px}
+    .form-row input[type=range]{width:100%}
+
+    .ad-box{margin:18px 0; padding:12px; border-radius:10px; background:#fff9f9; border:1px dashed #f0c; text-align:center}
+
+    footer{margin-top:18px; font-size:13px; color:#334; text-align:center}
+
+    @media (max-width:920px){.uploader{grid-template-columns:1fr;}.preview{margin-top:8px}}
+    @media (max-width:420px){header{padding:16px} .card{padding:12px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1 style="margin:0;font-size:20px">Picture Background Remover</h1>
+    <div style="font-size:13px;opacity:.9">Upload → Remove background (demo chroma-key or replace with API) → Download PNG</div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0 0 8px 0">Remove Background — Quick & Responsive</h2>
+          <p style="margin:0;color:#345;max-width:56ch">This tool includes a built-in chroma-key background remover for demos (choose color + tolerance). For production replace the processing function with a background-removal API (e.g. remove.bg, Adobe, or your backend ML).
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn" id="downloadBtn" disabled>Download PNG</button>
+          <button class="btn secondary" id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div class="uploader">
+        <div>
+          <div id="dropArea" class="drop" tabindex="0" aria-label="Drop image here or click to upload">
+            <div>
+              <strong>Drag & drop an image here</strong>
+              <div style="height:8px"></div>
+              <small>or <label for="fileInput" style="color:var(--primary);cursor:pointer">choose a file</label> (PNG/JPG)</small>
+              <div style="height:10px"></div>
+              <input id="fileInput" type="file" accept="image/*">
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:12px">
+            <div style="min-width:120px;">
+              <label for="modeSelect">Mode</label>
+              <select id="modeSelect" style="padding:8px;border-radius:8px;border:1px solid #d6e0f5">
+                <option value="chroma">Chroma-key (demo)</option>
+                <option value="api">External API (replace handler)</option>
+              </select>
+            </div>
+
+            <div style="min-width:140px;">
+              <label for="colorPicker">Target color</label>
+              <input id="colorPicker" type="color" value="#ffffff" style="height:40px;width:100%;border-radius:8px;border:1px solid #ddd;">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div style="flex:1">
+              <label for="tolerance">Tolerance: <span id="tolVal">30</span></label>
+              <input id="tolerance" type="range" min="0" max="200" value="30">
+            </div>
+            <div style="width:160px">
+              <label for="minAlpha">Min alpha</label>
+              <input id="minAlpha" type="range" min="0" max="255" value="10">
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="processBtn" disabled>Remove Background</button>
+            <button class="btn secondary" id="previewTransparencyBtn" disabled>Show Transparency Grid</button>
+          </div>
+        </div>
+
+        <div class="preview">
+          <div style="display:flex;align-items:center;gap:12px;justify-content:center;">
+            <div>
+              <small style="display:block;margin-bottom:6px;font-weight:600">Preview</small>
+              <canvas id="canvas" width="640" height="360" aria-label="Processed image preview"></canvas>
+            </div>
+          </div>
+          <div id="info" style="margin-top:10px;color:#456;font-size:13px">No image loaded</div>
+        </div>
+      </div>
+
+      <div class="ad-box" role="complementary" aria-label="Ad space">
+        <!-- Google AdSense placeholder: replace with your AdSense code and Ad Unit ID -->
+        <!-- Example: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" crossorigin="anonymous"></script>
+             <ins class="adsbygoogle"
+                  style="display:block"
+                  data-ad-client="ca-pub-XXXXXXXXXXXX"
+                  data-ad-slot="YYYYYYYYY"
+                  data-ad-format="auto"></ins>
+             <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        -->
+        Advertisement (Insert AdSense code above)
+      </div>
+
+      <div style="margin-top:4px;font-size:13px;color:#345">Tip: For complex images or hair/details use an external background-removal API for better results. Replace <code>processWithAPI()</code> handler in the script.
+      </div>
+
+    </section>
+
+    <footer>
+      <small>© <span id="year"></span> Picture Background Remover — SEO friendly • Built for performance</small>
+    </footer>
+  </main>
+
+<script>
+// Small utility functions
+const qs = sel => document.querySelector(sel);
+const canvas = qs('#canvas');
+const ctx = canvas.getContext('2d');
+let img = new Image();
+let originalImageData = null;
+let showGrid = false;
+
+// DOM
+const fileInput = qs('#fileInput');
+const dropArea = qs('#dropArea');
+const processBtn = qs('#processBtn');
+const downloadBtn = qs('#downloadBtn');
+const resetBtn = qs('#resetBtn');
+const colorPicker = qs('#colorPicker');
+const tolerance = qs('#tolerance');
+const tolVal = qs('#tolVal');
+const minAlpha = qs('#minAlpha');
+const modeSelect = qs('#modeSelect');
+const info = qs('#info');
+const previewTransparencyBtn = qs('#previewTransparencyBtn');
+
+// Accessibility & small UI
+qs('#year').textContent = new Date().getFullYear();
+
+// Drag & drop
+['dragenter','dragover'].forEach(evt=> dropArea.addEventListener(evt, e=>{e.preventDefault(); dropArea.classList.add('dragover')}));
+['dragleave','drop'].forEach(evt=> dropArea.addEventListener(evt, e=>{e.preventDefault(); dropArea.classList.remove('dragover')}));
+dropArea.addEventListener('drop',e=>{ const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f) handleFile(f); });
+
+// File input
+fileInput.addEventListener('change', e=>{ const f = e.target.files[0]; if(f) handleFile(f); });
+
+// Click drop to open file input
+dropArea.addEventListener('click', ()=> fileInput.click());
+
+function handleFile(file){
+  if(!file.type.startsWith('image/')){ alert('Please upload an image file'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    img = new Image();
+    img.onload = () => {
+      // Resize canvas to image keeping max width
+      const maxW = 1200; const ratio = img.width / img.height;
+      let w = Math.min(img.width, maxW); let h = Math.round(w / ratio);
+      canvas.width = w; canvas.height = h;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,w,h);
+      originalImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+      info.textContent = `${file.name} — ${img.width}×${img.height}`;
+      processBtn.disabled = false; downloadBtn.disabled = true; previewTransparencyBtn.disabled = false;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Update tolerance label
+tolerance.addEventListener('input', ()=> tolVal.textContent = tolerance.value);
+
+// Main process button
+processBtn.addEventListener('click', async ()=>{
+  if(!originalImageData) return;
+  if(modeSelect.value === 'api'){
+    // Placeholder: call external API here. We provide a demo fallback.
+    await processWithAPI();
+  } else {
+    removeBackgroundChroma();
+  }
+});
+
+// Toggle transparency grid for preview
+previewTransparencyBtn.addEventListener('click', ()=>{
+  showGrid = !showGrid; drawPreview(); previewTransparencyBtn.textContent = showGrid? 'Hide Transparency Grid':'Show Transparency Grid';
+});
+
+resetBtn.addEventListener('click', ()=>{
+  if(originalImageData) ctx.putImageData(originalImageData,0,0);
+  downloadBtn.disabled = true; info.textContent = 'Image reset';
+});
+
+// Download
+downloadBtn.addEventListener('click', ()=>{
+  const link = document.createElement('a');
+  link.download = 'transparent.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+function drawPreview(){
+  // optionally draw checkerboard behind
+  if(showGrid){
+    const patternSize = 16;
+    const cols = Math.ceil(canvas.width / patternSize);
+    const rows = Math.ceil(canvas.height / patternSize);
+    // create an offscreen canvas for checkerboard
+    const g = document.createElement('canvas'); g.width = canvas.width; g.height = canvas.height; const gc = g.getContext('2d');
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const is = (x+y)%2==0? '#ddd':'#fff';
+        gc.fillStyle = is; gc.fillRect(x*patternSize,y*patternSize,patternSize,patternSize);
+      }
+    }
+    ctx.putImageData(originalImageData,0,0);
+    // composite: draw checkerboard below image by copying image pixels but leaving transparency
+    // draw checkerboard to visible canvas
+    const temp = ctx.getImageData(0,0,canvas.width,canvas.height);
+    ctx.drawImage(g,0,0);
+    ctx.putImageData(temp,0,0);
+  } else {
+    // simply put image data
+    if(originalImageData) ctx.putImageData(originalImageData,0,0);
+  }
+}
+
+function removeBackgroundChroma(){
+  // Simple chroma-key: remove pixels close to selected color
+  const hex = colorPicker.value;
+  const rT = parseInt(hex.substr(1,2),16);
+  const gT = parseInt(hex.substr(3,2),16);
+  const bT = parseInt(hex.substr(5,2),16);
+  const tol = parseInt(tolerance.value,10);
+  const minA = parseInt(minAlpha.value,10);
+
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data = imgData.data;
+  for(let i=0;i<data.length;i+=4){
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const dist = Math.sqrt((r-rT)*(r-rT) + (g-gT)*(g-gT) + (b-bT)*(b-bT));
+    if(dist <= tol){
+      // set alpha based on closeness (soft edge)
+      const alpha = Math.max(0, Math.round((dist / tol) * 255));
+      data[i+3] = Math.max(alpha, minA) >= 255 ? 0 : Math.max(0, alpha);
+      // if fully close, make fully transparent
+      if(dist <= tol*0.35) data[i+3] = 0;
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+  // Save processed data to originalImageData so download uses processed version
+  originalImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  downloadBtn.disabled = false; info.textContent = 'Background removed (chroma-key demo).';
+}
+
+async function processWithAPI(){
+  // Placeholder for API integration.
+  // Example: send original image (dataURL) to your server or third-party API and receive a transparent PNG back.
+  // For this demo we just run chroma-key as fallback.
+  info.textContent = 'API mode selected — using demo fallback (chroma-key). Replace processWithAPI() with your API call.';
+  removeBackgroundChroma();
+}
+
+// Keyboard accessibility for drop area
+dropArea.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+// When image is processed, ensure download uses PNG with alpha
+// After chroma removal we enable download button that uses canvas.toDataURL('image/png')
+
+// Small performance guard: if image big, warn user
+
+</script>
+</body>
+</html>
